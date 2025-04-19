@@ -83,7 +83,18 @@ public class AtlAtlas implements Disposable {
     }
 
 
-    /** Adds a region to the atlas. The specified texture will be disposed when the atlas is disposed. */
+    /**
+     * Adds a region to the atlas. The texture for the specified region will be disposed when the atlas is disposed.
+     * The index of the region will be 0 if no existing regions had the specified name, or otherwise will be one greater
+     * than the highest index of a region with the specified name.
+     * @param name the name of the region to use
+     * @param texture the Texture to use in the AtlasRegion, as the page image or "parent"
+     * @param x the x-coordinate to get a region from texture
+     * @param y the y-coordinate to get a region from texture
+     * @param width the width of the region to use from texture
+     * @param height the height of the region to use from texture
+     * @return the new AtlasRegion this created and added
+     */
     public AtlasRegion addRegion (String name, Texture texture, int x, int y, int width, int height) {
         textures.add(texture);
         AtlasRegion region = new AtlasRegion(texture, x, y, width, height);
@@ -101,7 +112,14 @@ public class AtlAtlas implements Disposable {
         return region;
     }
 
-    /** Adds a region to the atlas. The texture for the specified region will be disposed when the atlas is disposed. */
+    /**
+     * Adds a region to the atlas. The texture for the specified region will be disposed when the atlas is disposed.
+     * The index of the region will be 0 if no existing regions had the specified name, or otherwise will be one greater
+     * than the highest index of a region with the specified name.
+     * @param name the name of the region to use
+     * @param textureRegion the TextureRegion to use in the AtlasRegion
+     * @return the new AtlasRegion this created and added
+     */
     public AtlasRegion addRegion (String name, TextureRegion textureRegion) {
         textures.add(textureRegion.getTexture());
         AtlasRegion region = new AtlasRegion(textureRegion);
@@ -135,6 +153,34 @@ public class AtlAtlas implements Disposable {
      */
     public ObjectSet<Texture> getTextures () {
         return textures;
+    }
+
+    /**
+     * Returns the first region found with the specified name.
+     * This method does not need to be cached; it is a simple map lookup and array access.
+     * @param name the name to look up
+     * @return the first region found with the specified name (first by index), or null if the name was not found
+     */
+    public @Null AtlasRegion findRegion (String name) {
+        AtlasRegion[] found = regions.get(name);
+        if(found == null || found.length == 0) return null;
+        return found[0];
+    }
+
+    /**
+     * Returns the region found with the specified name and index.
+     * This method does not need to be cached; it is a simple map lookup and array access.
+     * If index is negative, it will be treated as 0 for compatibility; if it is larger than the largest index this
+     * knows for the specified name, then this returns null.
+     * @param name the name to look up
+     * @param index the index of the region to get with the specified name
+     * @return the region with the specified name and index if found, or null if the name and index were not found
+     */
+    public @Null AtlasRegion findRegion (String name, int index) {
+        index ^= index >> 31; // branch-less way to assign 0 to any negative index.
+        AtlasRegion[] found = regions.get(name);
+        if(found == null || index >= found.length) return null;
+        return found[index];
     }
 
     @Override
