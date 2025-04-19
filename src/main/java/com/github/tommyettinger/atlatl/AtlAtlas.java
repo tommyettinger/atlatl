@@ -5,18 +5,40 @@ import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas.AtlasRegion;
-import com.badlogic.gdx.utils.Disposable;
-import com.badlogic.gdx.utils.Null;
-import com.badlogic.gdx.utils.ObjectSet;
-import com.badlogic.gdx.utils.OrderedMap;
+import com.badlogic.gdx.utils.*;
 
 /**
  * An alternative to {@link TextureAtlas}.
  */
 public class AtlAtlas implements Disposable {
-    public OrderedMap<String, AtlasRegion[]> regions;
-    public ObjectSet<Texture> textures;
+    public final OrderedMap<String, AtlasRegion[]> regions;
+    public final ObjectSet<Texture> textures;
 
+    public AtlAtlas() {
+        textures = new ObjectSet<>(1);
+        regions = new OrderedMap<>(64, 0.625f);
+    }
+
+    public AtlAtlas(TextureAtlas ta) {
+        textures = ta.getTextures();
+        Array<AtlasRegion> rs = ta.getRegions();
+        OrderedMap<String, Array<AtlasRegion>> map = new OrderedMap<>(rs.size, 0.625f);
+
+        for (int i = 0, n = rs.size; i < n; i++) {
+            AtlasRegion region = rs.get(i);
+            Array<AtlasRegion> matched = map.get(region.name);
+            if(matched == null) {
+                matched = new Array<>(AtlasRegion.class);
+                map.put(region.name, matched);
+            }
+            matched.add(region);
+        }
+        regions = new OrderedMap<>(map.size, 0.625f);
+        for(OrderedMap.Entry<String, Array<AtlasRegion>> ent : map.entries()) {
+            ent.value.sort((a, b) -> (a.index - b.index));
+            regions.put(ent.key, ent.value.toArray());
+        }
+    }
 
     public static class AtlAtlasData {
 
