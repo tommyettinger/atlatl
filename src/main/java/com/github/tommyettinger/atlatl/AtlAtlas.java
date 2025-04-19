@@ -183,6 +183,32 @@ public class AtlAtlas implements Disposable {
         return found[index];
     }
 
+    /**
+     * Returns all regions found with the specified name, sorted by smallest to largest {@link AtlasRegion#index index}.
+     * This method does not need to be cached; it is a simple map lookup.
+     * @param name the name to look up
+     * @return the array of all regions with the specified name, sorted by index in ascending order
+     */
+    public @Null AtlasRegion[] findRegions (String name) {
+        AtlasRegion[] found = regions.get(name);
+        if(found == null || found.length == 0) return null;
+        return found;
+    }
+
+    /**
+     * Appends all regions found with the specified name into the given Array of TextureRegion or AtlasRegion.
+     * This method does not need to be cached; it is a simple map lookup and addAll() call.
+     * @param name the name to look up
+     * @param toFill an Array that will be modified in-place if regions are found with the specified name
+     * @return {@code toFill}, potentially after modifications
+     */
+    public Array<TextureRegion> appendRegionsInto (String name, Array<TextureRegion> toFill) {
+        AtlasRegion[] found = regions.get(name);
+        if (found != null && found.length != 0)
+            toFill.addAll(found);
+        return toFill;
+    }
+
     @Override
     public void dispose() {
         for(Texture t : textures){
