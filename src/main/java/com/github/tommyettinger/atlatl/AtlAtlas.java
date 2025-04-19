@@ -300,6 +300,28 @@ public class AtlAtlas implements Disposable {
         return toFill;
     }
 
+    /**
+     * Returns the first region found with the specified name as a {@link NinePatch}. The region must have been packed
+     * with ninepatch splits, otherwise this returns a NinePatch that acts no differently from any other TextureRegion.
+     * This won't throw an Exception if ninepatch splits are missing.
+     * @param name the name to look up
+     * @return a new NinePatch created from the region with the specified name and the 9-patch info stored in the atlas,
+     * or null if the name was not found
+     */
+    public @Null NinePatch createPatch (String name) {
+        AtlasRegion[] found = regions.get(name);
+        if (found == null || found.length == 0) return null;
+        AtlasRegion region = found[0];
+        int[] splits = region.findValue("split");
+        if (splits == null || splits.length < 4)
+            return new NinePatch(region);
+        NinePatch patch = new NinePatch(region, splits[0], splits[1], splits[2], splits[3]);
+        int[] pads = region.findValue("pad");
+        if (pads != null && pads.length >= 4)
+            patch.setPadding(pads[0], pads[1], pads[2], pads[3]);
+        return patch;
+    }
+
     @Override
     public void dispose() {
         for(Texture t : textures){
