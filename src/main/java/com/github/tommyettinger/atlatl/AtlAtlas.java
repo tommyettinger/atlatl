@@ -7,6 +7,7 @@ import com.badlogic.gdx.graphics.g2d.NinePatch;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas.AtlasRegion;
+import com.badlogic.gdx.graphics.g2d.TextureAtlas.AtlasSprite;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.utils.*;
 
@@ -18,6 +19,10 @@ import java.util.Arrays;
 public class AtlAtlas implements Disposable {
     public final OrderedMap<String, AtlasRegion[]> regions;
     public final ObjectSet<Texture> textures;
+    /**
+     * An empty Sprite array that is reused when this needs to return an array with nothing in it.
+     */
+    protected static final Sprite[] EMPTY_SPRITE_ARRAY = new Sprite[0];
 
     public AtlAtlas() {
         textures = new ObjectSet<>(1);
@@ -197,7 +202,6 @@ public class AtlAtlas implements Disposable {
 
     /**
      * Appends all regions found with the specified name into the given Array of TextureRegion or AtlasRegion.
-     * This method does not need to be cached; it is a simple map lookup and addAll() call.
      * @param name the name to look up
      * @param toFill an Array that will be modified in-place if regions are found with the specified name
      * @return {@code toFill}, potentially after modifications
@@ -206,6 +210,93 @@ public class AtlAtlas implements Disposable {
         AtlasRegion[] found = regions.get(name);
         if (found != null && found.length != 0)
             toFill.addAll(found);
+        return toFill;
+    }
+
+    /**
+     * Creates a Sprite or AtlasSprite, as appropriate, from the given AtlasRegion. If the region has no stripped
+     * whitespace, this will return a Sprite that is really just a Sprite; otherwise, this will return an AtlasSprite
+     * that uses the full set of extra info from the AtlasRegion.
+     * @param region an AtlasRegion to use to create a Sprite
+     * @return the created Sprite or AtlasSprite
+     */
+    protected Sprite newSprite (AtlasRegion region) {
+        if (region.packedWidth == region.originalWidth && region.packedHeight == region.originalHeight) {
+            if (region.rotate) {
+                Sprite sprite = new Sprite(region);
+                sprite.setBounds(0, 0, region.getRegionHeight(), region.getRegionWidth());
+                sprite.rotate90(true);
+                return sprite;
+            }
+            return new Sprite(region);
+        }
+        return new AtlasSprite(region);
+    }
+
+    /**
+     * Returns a Sprite or AtlasSprite created from the first region found with the specified name as a sprite.
+     * If whitespace was stripped from the region when it was packed, the sprite is automatically positioned as if
+     * whitespace had not been stripped. This always either allocates a new Sprite (or AtlasSprite, if whitespace was
+     * stripped from the found region), or returns null (if no region has the specified name).
+     * @param name the name to look up
+     * @return a new Sprite created from the first region found with the specified name (first by index), or
+     * null if the name was not found
+     */
+    public @Null Sprite createSprite (String name) {
+        AtlasRegion[] found = regions.get(name);
+        if(found == null || found.length == 0) return null;
+        return newSprite(found[0]);
+    }
+
+    /**
+     * Returns a Sprite or AtlasSprite created from the region found with the specified name and index.
+     * If index is negative, it will be treated as 0 for compatibility; if it is larger than the largest index this
+     * knows for the specified name, then this returns null.
+     * If whitespace was stripped from the region when it was packed, the sprite is automatically positioned as if
+     * whitespace had not been stripped. This always either allocates a new Sprite (or AtlasSprite, if whitespace was
+     * stripped from the found region), or returns null (if no region has the specified name).
+     * @param name the name to look up
+     * @param index the index of the region to get with the specified name
+     * @return a new Sprite created from the region with the specified name and index if found, or
+     * null if the name and index were not found
+     */
+    public @Null Sprite createSprite (String name, int index) {
+        index ^= index >> 31; // branch-less way to assign 0 to any negative index.
+        AtlasRegion[] found = regions.get(name);
+        if(found == null || index >= found.length) return null;
+        return newSprite(found[index]);
+    }
+
+    /**
+     * Creates and returns an array of Sprite created from all regions found with the specified name, sorted by smallest
+     * to largest {@link AtlasRegion#index index}. This does not allocate a new array if the name was not found.
+     * @param name the name to look up
+     * @return the array of Sprites made from all regions with the specified name, sorted by index in ascending order
+     */
+    public Sprite[] createSprites (String name) {
+        AtlasRegion[] found = regions.get(name);
+        int len;
+        if(found == null || (len = found.length) == 0) return EMPTY_SPRITE_ARRAY;
+        Sprite[] made = new Sprite[len];
+        for (int i = 0; i < len; i++) {
+            made[i] = newSprite(found[i]);
+        }
+        return made;
+    }
+
+    /**
+     * Appends Sprites made from all regions found with the specified name into the given Array of Sprite.
+     * @param name the name to look up
+     * @param toFill an Array that will be modified in-place if regions are found with the specified name
+     * @return {@code toFill}, potentially after modifications
+     */
+    public Array<Sprite> appendSpritesInto (String name, Array<Sprite> toFill) {
+        AtlasRegion[] found = regions.get(name);
+        int len;
+        if(found == null || (len = found.length) == 0) return toFill;
+        for (int i = 0; i < len; i++) {
+            toFill.add(newSprite(found[i]));
+        }
         return toFill;
     }
 
